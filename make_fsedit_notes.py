@@ -1,4 +1,4 @@
-#!/Users/zeynepenkavi/anaconda/envs/py37/bin/python
+#!/Users/zeynepenkavi/anaconda/envs/py2/bin/python
 
 """
     Creates report of manual edits made on Freesurfer recon outputs
@@ -10,14 +10,17 @@
         outdir = director where edit report will be saved into
 
     Returns:
-        sub-[subnum].csv
+        sub-[subnum]-[typ]-edits.csv
 """
 
 from argparse import ArgumentParser
 import os
 from os import path
+import nibabel as nib
+import numpy as np
 import pandas as pd
 import sys
+from zipfile import ZipFile
 
 parser = ArgumentParser()
 parser.add_argument("--subnum")
@@ -31,7 +34,7 @@ basedir = args.basedir
 outdir = args.outdir
 
 # Check if original zip exists. If not print error and quit
-exists = path.isfile(path.join(basedir, 'sub-', subnum, '.zip'))
+exists = path.isfile(path.join(basedir, 'sub-'+subnum+'.zip'))
 if not exists:
     print("Unedited images not found in directory. Quitting...")
     try:
@@ -39,8 +42,43 @@ if not exists:
     except SystemExit:
         print("Quit because difference images cannot be calculated without unedited images.")
 else:
-    #Unzip unedited images
+    # Unzip unedited images of potential interest
+    toExtract = ['brainmask.mgz', 'wm.mgz', 'brain.finalsurfs.mgz']
+    suffix = path.join('sub-'+subnum, 'mri')
+    toExtract = [path.join(suffix, s) for s in toExtract]
+    with ZipFile(path.join(basedir, 'sub-'+subnum+'.zip'), 'r') as zipObj:
+        # Get a list of all archived file names from the zip
+        listOfFileNames = zipObj.namelist()
+        # Iterate over the file names
+        for fileName in listOfFileNames:
+            # Check filename endswith csv
+            if fileName in toExtract:
+                # Extract a single file from zip
+                zipObj.extract(fileName, path.join(basedir, 'sub-'+subnum+'_unedited'))
 
+# Store paths in vars for faster string comprehension
+editp = path.join(basedir, 'sub-'+subnum)
+uneditp = path.join(basedir, 'sub-'+subnum+'_unedited')
+typ_dict = {'bm': 'brainmask', 'wm': 'wm', 'bfs': 'brain.finalsurfs'}
+vol = typ_dict[typ]
+
+# Calculate difference image
+bm_edit_img = nib.load(path.join(editp,'mri/%s.mgz')%(vol))
+bm_edit_data = bm_edit_img.get_fdata()
+bm_unedit_img = nib.load(path.join(uneditp,'sub-%s/mri/%s.mgz')%(subnum, vol))
+bm_unedit_data = bm_unedit_img.get_fdata()
+diff_data = bm_unedit_data - bm_edit_data
+
+# Extract non-zero values from difference data and arrange in df
+out = pd.DataFrame(np.asarray(np.asarray(diff_data != 0).nonzero()).T).rename(columns={0:"Sag", 1:"Axe", 2:"Cor"})
+out['diff_val'] = diff_data[np.where(diff_data != 0)]
+out['Action'] = np.where(out.diff_val>0, "delete voxel", "add voxel")
+out = out.drop(columns="diff_val")
+out['Vol'] = vol
+out = out.sort_values(by=['Cor'])
+out.reset_index(drop=True)
+
+def get_bm_edits(subnum = subnum):
 
 #Output:
 #1. raw report; sort by coronal slice number in the end
@@ -49,11 +87,6 @@ else:
 #2. rolled up report (don't roll up just by distance; action must match as well)
 #Case | Slice (Sag) | Slice (Axe) | Slice (Cor) | Action | Vol | Num_voxels
 
-import os
-
-os.system()
-
-def get_bm_edits(subnum = subnum):
     return out
 
 def get_wm_edits(subnum = subnum):
@@ -72,15 +105,9 @@ if vol == 'all':
     for k,v in fn_dict.items():
         out = out.append(fn_dict[k]())
 else:
-    out = fn_dict[typ]() #apply corresponding function as specified in the dicitonary of functions
-    out.to_csv(path.join(outdir, subnum+typ+'_edits.csv'))
+    out = fn_dict[typ]() # apply corresponding function as specified in the dicitonary of functions
 
-#Steps:
+out.to_csv(path.join(outdir, subnum+'_'+typ+'_edits.csv'))
 
-#Unzip the original files again to be used for difference images
-    #Make sure to save the new unzip with new suffix e.g. sub-SUBNUM_core1_unedited
-#if vol != cp (control points)
-#Convert the .mgz into .nii.gz using freesurfer > mri_convert
-#Calculate difference image between the original and edited nii.gz
-
-#
+# Clean up: delete unzipped unedited directory
+os.rmdir(uneditp)
