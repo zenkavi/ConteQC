@@ -124,10 +124,19 @@ def get_wm_edits(editp=editp, uneditp=uneditp, vol=vol, subnum=subnum):
 def get_cp_edits(subnum = subnum):
     
     # Check if control points exist
-    if path.isfile(path.join(editp,'tmp/%s')%(vol)):
+    cp_fname = path.join(editp,'tmp/%s')%(vol)
+    if path.isfile(cp_fname):
         # Read in control.dat
-    
-    
+        cps = []
+        with open(cp_fname, 'r') as fd:
+            for line in fd:
+                line = line.strip()
+                vals = line.split(' ')
+                if len(vals) == 3:
+                    cps.append(vals)
+        cps = np.array(cps, dtype=np.float)
+        cps = pd.DataFrame(cps).rename(columns={0: "Sag", 1: "Axe", 2: "Cor"})
+
         # Translating to voxel space/slice numbers comparable to bm and wm edits
         # http://www.grahamwideman.com/gw/brain/fs/coords/fscoords.htm
         # Right = 128 - Byte
@@ -141,6 +150,23 @@ def get_cp_edits(subnum = subnum):
         # -36 = 128 - Sag; Sag = 128 - (-36) = 164
         # -12 = Axe - 128; Axe = 128 + (-12) = 116
         # 24 = 128 - Cor; Cor = 128 - (24) = 104
+        
+        cps['Sag'] = 128 - cps['Sag']
+        cps['Axe'] = 128 + cps['Axe']
+        cps['Cor'] = 128 - cps['Cor']
+        
+        # Reshape to make it have the same columns as the bm/wm edits for appending later
+        # cluster	min_sag	max_sag	min_axe	max_axe	min_cor	max_cor	num_vox	vol	action
+        out = pd.DataFrame(data={"cluster": np.nan,
+                                "min_sag": cps['Sag'],
+                                "max_sag": cps['Sag'],
+                                "min_axe": cps['Axe'],
+                                "max_axe": cps['Axe'],
+                                "min_cor": cps['Cor'],
+                                "max_cor": cps['Cor'],
+                                "num_vox": 1,
+                                "vol": "cp",
+                                "action": "added cp"})
     
     else:
         print("No control points found for %s"%(subnum))
