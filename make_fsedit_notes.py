@@ -59,136 +59,19 @@ else:
 # Store paths in vars for faster string comprehension
 editp = path.join(basedir, 'sub-'+subnum)
 uneditp = path.join(basedir, 'sub-'+subnum+'_unedited')
-typ_dict = {'bm': 'brainmask', 'wm': 'wm', 'bfs': 'brain.finalsurfs', 'cp': 'control.dat'}
-vol = typ_dict[typ]
+typ_dict = {'bm': 'brainmask', 'wm': 'wm', 'cp': 'control.dat', 'bfs': 'brain.finalsurfs'}
+fn_dict = {'bm': get_bm_edits, 'wm': get_wm_edits, 'cp': get_cp_edits, 'bfs': get_bfs_edits}
 
-
-def get_diff_data(editp=editp, uneditp=uneditp, vol=vol, subnum=subnum):
-    # Calculate difference image
-    edit_img = nib.load(path.join(editp,'mri/%s.mgz')%(vol))
-    edit_data = edit_img.get_fdata()
-    unedit_img = nib.load(path.join(uneditp,'sub-%s/mri/%s.mgz')%(subnum, vol))
-    unedit_data = unedit_img.get_fdata()
-    diff_data = unedit_data - edit_data
-    return(diff_data)
-
-def summarize_edits(diff_data):
-
-    # Extract non-zero values from difference data and arrange in df
-    out = pd.DataFrame(np.asarray(np.asarray(diff_data != 0).nonzero()).T).rename(columns={0:"Sag", 1:"Axe", 2:"Cor"})
-    out['diff_val'] = diff_data[np.where(diff_data != 0)]
-    out['Action'] = np.where(out.diff_val>0, "delete voxel", "add voxel")
-    out = out.drop(columns="diff_val")
-    out['Vol'] = vol
-    out = out.sort_values(by=['Cor'])
-    out.reset_index(drop=True)
-
-    # Make distance matrix
-    dm = distance_matrix(out[['Sag', 'Axe', 'Cor']], out[['Sag', 'Axe', 'Cor']])
-
-    # Apply clustering on the distance matrix
-    # eps: The maximum distance between two samples for one to be considered as in the neighborhood of the other. This is not a maximum bound on the distances of points within a cluster. This is the most important DBSCAN parameter to choose appropriately for your data set and distance function.
-    # min_samples: The number of samples (or total weight) in a neighborhood for a point to be considered as a core point. This includes the point itself.
-    clustering = DBSCAN(eps=50, min_samples=5).fit(dm)
-
-    # Assign cluster labels to use as edit groups later
-    out['cluster'] = clustering.labels_
-
-    # Roll up by edit group (i.e. cluster) summarizing the beginning and the end of each cluster in each orientation
-    out_grouped = out.groupby('cluster')
-    out_grouped = out_grouped.agg(min_sag=('Sag', min),
-                   max_sag=('Sag', max),
-                   min_axe=('Axe', min),
-                   max_axe=('Axe', max),
-                   min_cor=('Cor', min),
-                   max_cor=('Cor', max),
-                   num_vox=('Cor', 'count')).reset_index()
-    out_grouped['vol'] = out.Vol.unique()[0]
-    out_grouped['action'] = out.Action.unique()[0]
-    return(out_grouped)
-
-def get_bm_edits(editp=editp, uneditp=uneditp, vol=vol, subnum=subnum):
-    
-    bm_diff_data = get_diff_data(editp=editp, uneditp=uneditp, vol=vol, subnum=subnum)
-    bm_edits = bm_diff_data.groupby('action').apply(summarize_edits).reset_index()
-
-    return bm_edits
-
-def get_wm_edits(editp=editp, uneditp=uneditp, vol=vol, subnum=subnum):
-    
-    wm_diff_data = get_diff_data(editp=editp, uneditp=uneditp, vol=vol, subnum=subnum)
-    wm_edits = wm_diff_data.groupby('action').apply(summarize_edits).reset_index()
-
-    return wm_edits
-
-def get_cp_edits(subnum = subnum):
-    
-    # Check if control points exist
-    cp_fname = path.join(editp,'tmp/%s')%(vol)
-    if path.isfile(cp_fname):
-        # Read in control.dat
-        cps = []
-        with open(cp_fname, 'r') as fd:
-            for line in fd:
-                line = line.strip()
-                vals = line.split(' ')
-                if len(vals) == 3:
-                    cps.append(vals)
-        cps = np.array(cps, dtype=np.float)
-        cps = pd.DataFrame(cps).rename(columns={0: "Sag", 1: "Axe", 2: "Cor"})
-
-        # Translating to voxel space/slice numbers comparable to bm and wm edits
-        # http://www.grahamwideman.com/gw/brain/fs/coords/fscoords.htm
-        # Right = 128 - Byte
-        # Ant = Slice - 128
-        # Sup = 128 - Row
-
-        # control.dat format TkReg RAS
-        # -36 -12 24
-        # Translation to [Sag, Axe, Cor]
-        # [164, 104, 116]
-        # -36 = 128 - Sag; Sag = 128 - (-36) = 164
-        # -12 = Axe - 128; Axe = 128 + (-12) = 116
-        # 24 = 128 - Cor; Cor = 128 - (24) = 104
-        
-        cps['Sag'] = 128 - cps['Sag']
-        cps['Axe'] = 128 + cps['Axe']
-        cps['Cor'] = 128 - cps['Cor']
-        
-        # Reshape to make it have the same columns as the bm/wm edits for appending later
-        # cluster	min_sag	max_sag	min_axe	max_axe	min_cor	max_cor	num_vox	vol	action
-        out = pd.DataFrame(data={"cluster": np.nan,
-                                "min_sag": cps['Sag'],
-                                "max_sag": cps['Sag'],
-                                "min_axe": cps['Axe'],
-                                "max_axe": cps['Axe'],
-                                "min_cor": cps['Cor'],
-                                "max_cor": cps['Cor'],
-                                "num_vox": 1,
-                                "vol": "cp",
-                                "action": "added cp"})
-    
-    else:
-        print("No control points found for %s"%(subnum))
-        out = pd.DataFrame()
-    
-    # Always returns something to avoid exceptions when looping through and appending all types of edits below
-    # (might not be necessary)
-    return out
-
-def get_bfm_edits(subnum = subnum):
-    return out
-
-fn_dict = {'bm': get_bm_edits, 'wm': get_wm_edits, 'cp': get_cp_edits, 'bfm': get_bfm_edits}
-
-if vol == 'all':
+if typ == 'all':
     out = pd.DataFrame()
     # loop through function lookup dictionary and run all edit extraction functions
     for k,v in fn_dict.items():
-        out = out.append(fn_dict[k]())
+        vol = typ_dict[k]
+        out = out.append(v(editp=editp, uneditp=uneditp, vol=vol, subnum=subnum))
 else:
     # apply corresponding function as specified in the dicitonary of functions
-    out = fn_dict[typ]() 
+    vol = typ_dict[typ]
+    out = fn_dict[vol](editp=editp, uneditp=uneditp, vol=vol, subnum=subnum) 
 
 out.to_csv(path.join(outdir, subnum+'_'+typ+'_edits.csv'))
 
