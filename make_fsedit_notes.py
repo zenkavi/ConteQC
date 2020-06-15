@@ -1,4 +1,4 @@
-#!/Users/zeynepenkavi/anaconda/envs/py2/bin/python
+#!/Users/zeynepenkavi/anaconda/envs/py37/bin/python
 
 """
     Creates report of manual edits made on Freesurfer recon outputs
