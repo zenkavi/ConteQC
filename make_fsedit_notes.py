@@ -21,6 +21,7 @@ import numpy as np
 import pandas as pd
 import sys
 from zipfile import ZipFile
+from fsedit_notes_helpers import get_diff_data, summarize_edits, get_bm_edits, get_wm_edits, get_cp_edits, get_bfs_edits
 
 parser = ArgumentParser()
 parser.add_argument("--subnum")
@@ -55,6 +56,7 @@ else:
             if fileName in toExtract:
                 # Extract a single file from zip
                 zipObj.extract(fileName, path.join(basedir, 'sub-'+subnum+'_unedited'))
+    print("Extracting unedited files complete.")
 
 # Store paths in vars for faster string comprehension
 editp = path.join(basedir, 'sub-'+subnum)
@@ -66,9 +68,11 @@ if typ == 'all':
     out = pd.DataFrame()
     # loop through function lookup dictionary and run all edit extraction functions
     for k,v in fn_dict.items():
+        print("Extracting %s edits"%(k))
         vol = typ_dict[k]
         out = out.append(v(editp=editp, uneditp=uneditp, vol=vol, subnum=subnum))
 else:
+    print("Extracting %s edits"%(typ))
     # apply corresponding function as specified in the dicitonary of functions
     vol = typ_dict[typ]
     out = fn_dict[vol](editp=editp, uneditp=uneditp, vol=vol, subnum=subnum) 
