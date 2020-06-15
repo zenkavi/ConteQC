@@ -19,6 +19,7 @@ from os import path
 import nibabel as nib
 import numpy as np
 import pandas as pd
+import shutil
 import sys
 from zipfile import ZipFile
 from fsedit_notes_helpers import get_diff_data, summarize_edits, get_bm_edits, get_wm_edits, get_cp_edits, get_bfs_edits
@@ -80,4 +81,4 @@ else:
 out.to_csv(path.join(outdir, subnum+'_'+typ+'_edits.csv'))
 
 # Clean up: delete unzipped unedited directory
-os.rmdir(uneditp)
+shutil.rmtree(uneditp)
