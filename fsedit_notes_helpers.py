@@ -24,6 +24,12 @@ def get_diff_data(editp, uneditp, vol, subnum):
     out = pd.DataFrame(np.asarray(np.asarray(diff_data != 0).nonzero()).T).rename(columns={0:"Sag", 1:"Axe", 2:"Cor"})
     out['diff_val'] = diff_data[np.where(diff_data != 0)]
     out['Action'] = np.where(out.diff_val>0, "delete voxel", "add voxel")
+    
+    # When WM edits are not perfect it can look like voxel additions
+    # For the clarity of the summary drop these
+    if vol == "wm":
+        out = out.query("diff_val != -1")
+    
     out = out.drop(columns="diff_val")
     out['Vol'] = vol
     out = out.sort_values(by=['Cor'])
