@@ -4,3 +4,4 @@ sub-*
 *.log
 .ipynb_checkpoints
 second_pass
+__pycache__
