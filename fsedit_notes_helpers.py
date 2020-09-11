@@ -122,7 +122,7 @@ def get_cp_edits(editp, uneditp, vol, subnum):
                 if len(vals) == 3:
                     cps.append(vals)
         cps = np.array(cps, dtype=np.float)
-        cps = pd.DataFrame(cps).rename(columns={0: "Sag", 1: "Axe", 2: "Cor"})
+        cps = pd.DataFrame(cps).rename(columns={0: "Sag", 1: "Cor", 2: "Axe"})
 
         # Translating to voxel space/slice numbers comparable to bm and wm edits
         # http://www.grahamwideman.com/gw/brain/fs/coords/fscoords.htm
