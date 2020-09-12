@@ -31,7 +31,7 @@ def get_diff_data(editp, uneditp, vol, subnum, savediff, diffp):
     
     # When WM edits are not perfect it can look like voxel additions
     # For the clarity of the summary drop these
-    if vol == "wm":
+    if vol == "wm" or vol == "brainmask":
         out = out.query("diff_val != -1")
     
     out = out.drop(columns="diff_val")
