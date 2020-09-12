@@ -26,7 +26,7 @@ from fsedit_notes_helpers import get_diff_data, summarize_edits, get_bm_edits, g
 
 parser = ArgumentParser()
 parser.add_argument("--subnum")
-parser.add_argument("--typ")
+parser.add_argument("--typ", default='all')
 parser.add_argument("--basedir", default='/Users/zeynepenkavi/Downloads/ConteQC')
 parser.add_argument("--outdir", default='/Users/zeynepenkavi/Downloads/ConteQC')
 parser.add_argument("--savediff", default=True)
@@ -35,6 +35,7 @@ subnum = args.subnum
 typ = args.typ
 basedir = args.basedir
 outdir = args.outdir
+savediff = args.savediff
 
 # Check if original zip exists. If not print error and quit
 exists = path.isfile(path.join(basedir, 'sub-'+subnum+'.zip'))

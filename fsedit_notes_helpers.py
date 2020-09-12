@@ -22,7 +22,7 @@ def get_diff_data(editp, uneditp, vol, subnum, savediff, diffp):
     
     if savediff:
         diff_img = nib.MGHImage(diff_data.astype(np.int32), edit_img.affine)
-        nib.save(diff_img, os.path.join(diffp, 'diff_%s.mgz')%(vol)
+        nib.save(diff_img, os.path.join(diffp, 'diff_%s.mgz')%(vol))
         
     # Extract non-zero values from difference data and arrange in df
     out = pd.DataFrame(np.asarray(np.asarray(diff_data != 0).nonzero()).T).rename(columns={0:"Sag", 1:"Axe", 2:"Cor"})
@@ -93,7 +93,7 @@ def summarize_edits(diff_data, vol):
 def get_bm_edits(editp, uneditp, vol, subnum, savediff, diffp):
     
     if vol == "brainmask":
-        bm_diff_data = get_diff_data(editp=editp, uneditp=uneditp, vol=vol, subnum=subnum)
+        bm_diff_data = get_diff_data(editp=editp, uneditp=uneditp, vol=vol, subnum=subnum, savediff=savediff, diffp=diffp)
         bm_edits = summarize_edits(bm_diff_data, vol)
     else:
         print("Incorrect vol specification!")
@@ -104,7 +104,7 @@ def get_bm_edits(editp, uneditp, vol, subnum, savediff, diffp):
 def get_wm_edits(editp, uneditp, vol, subnum, savediff, diffp):
     
     if vol == "wm":
-        wm_diff_data = get_diff_data(editp=editp, uneditp=uneditp, vol=vol, subnum=subnum)
+        wm_diff_data = get_diff_data(editp=editp, uneditp=uneditp, vol=vol, subnum=subnum, savediff=savediff, diffp=diffp)
         wm_edits = summarize_edits(wm_diff_data, vol)
     else:
         print("Incorrect vol specification!")
@@ -112,7 +112,7 @@ def get_wm_edits(editp, uneditp, vol, subnum, savediff, diffp):
 
     return wm_edits
 
-def get_cp_edits(editp, uneditp, vol, subnum):
+def get_cp_edits(editp, uneditp, vol, subnum, savediff=False, diffp=None):
     
     # Check if control points exist
     cp_fname = path.join(editp,'tmp/%s')%(vol)
@@ -170,7 +170,7 @@ def get_cp_edits(editp, uneditp, vol, subnum):
 def get_bfs_edits(editp, uneditp, vol, subnum, savediff, diffp):
     
     if path.isfile(path.join(editp,'mri/%s.manedit.mgz')%(vol)):
-        bfs_diff_data = get_diff_data(editp=editp, uneditp=uneditp, vol=vol, subnum=subnum)
+        bfs_diff_data = get_diff_data(editp=editp, uneditp=uneditp, vol=vol, subnum=subnum, savediff=savediff, diffp=diffp)
         bfs_edits = summarize_edits(bfs_diff_data, vol)
     else: 
         print("No brain.finalsurfs.manedit.mgz file found for %s"%(subnum))
