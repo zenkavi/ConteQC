@@ -7,7 +7,7 @@ from scipy.spatial import distance_matrix
 from sklearn.cluster import DBSCAN
 from copy import copy
 
-def get_diff_data(editp, uneditp, vol, subnum):
+def get_diff_data(editp, uneditp, vol, subnum, savediff, diffp):
     # Calculate difference image
     
     if vol == "brain.finalsurfs":
@@ -20,6 +20,10 @@ def get_diff_data(editp, uneditp, vol, subnum):
     unedit_data = unedit_img.get_fdata()
     diff_data = unedit_data - edit_data
     
+    if savediff:
+        diff_img = nib.MGHImage(diff_data.astype(np.int32), edit_img.affine)
+        nib.save(diff_img, os.path.join(diffp, 'diff_%s.mgz')%(vol)
+        
     # Extract non-zero values from difference data and arrange in df
     out = pd.DataFrame(np.asarray(np.asarray(diff_data != 0).nonzero()).T).rename(columns={0:"Sag", 1:"Axe", 2:"Cor"})
     out['diff_val'] = diff_data[np.where(diff_data != 0)]
@@ -86,7 +90,7 @@ def summarize_edits(diff_data, vol):
     
     return(out)
 
-def get_bm_edits(editp, uneditp, vol, subnum):
+def get_bm_edits(editp, uneditp, vol, subnum, savediff, diffp):
     
     if vol == "brainmask":
         bm_diff_data = get_diff_data(editp=editp, uneditp=uneditp, vol=vol, subnum=subnum)
@@ -97,7 +101,7 @@ def get_bm_edits(editp, uneditp, vol, subnum):
 
     return bm_edits
 
-def get_wm_edits(editp, uneditp, vol, subnum):
+def get_wm_edits(editp, uneditp, vol, subnum, savediff, diffp):
     
     if vol == "wm":
         wm_diff_data = get_diff_data(editp=editp, uneditp=uneditp, vol=vol, subnum=subnum)
@@ -135,12 +139,12 @@ def get_cp_edits(editp, uneditp, vol, subnum):
         # Translation to [Sag, Axe, Cor]
         # [164, 104, 116]
         # -36 = 128 - Sag; Sag = 128 - (-36) = 164
-        # -12 = Axe - 128; Axe = 128 + (-12) = 116
-        # 24 = 128 - Cor; Cor = 128 - (24) = 104
+        # -12 = Cor - 128; Cor = 128 + (-12) = 116
+        # 24 = 128 - Axe; Axe = 128 - (24) = 104
         
         cps['Sag'] = 128 - cps['Sag']
-        cps['Axe'] = 128 + cps['Axe']
-        cps['Cor'] = 128 - cps['Cor']
+        cps['Cor'] = 128 + cps['Cor']
+        cps['Axe'] = 128 - cps['Axe']
         
         # Reshape to make it have the same columns as the bm/wm edits for appending later
         # cluster	min_sag	max_sag	min_axe	max_axe	min_cor	max_cor	num_vox	vol	action
@@ -163,11 +167,10 @@ def get_cp_edits(editp, uneditp, vol, subnum):
     # (might not be necessary)
     return out
 
-def get_bfs_edits(editp, uneditp, vol, subnum):
+def get_bfs_edits(editp, uneditp, vol, subnum, savediff, diffp):
     
     if path.isfile(path.join(editp,'mri/%s.manedit.mgz')%(vol)):
         bfs_diff_data = get_diff_data(editp=editp, uneditp=uneditp, vol=vol, subnum=subnum)
-        #bfs_edits = bfs_diff_data.groupby('Action').apply(summarize_edits).reset_index()
         bfs_edits = summarize_edits(bfs_diff_data, vol)
     else: 
         print("No brain.finalsurfs.manedit.mgz file found for %s"%(subnum))

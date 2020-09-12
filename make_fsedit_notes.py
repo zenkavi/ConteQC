@@ -29,6 +29,7 @@ parser.add_argument("--subnum")
 parser.add_argument("--typ")
 parser.add_argument("--basedir", default='/Users/zeynepenkavi/Downloads/ConteQC')
 parser.add_argument("--outdir", default='/Users/zeynepenkavi/Downloads/ConteQC')
+parser.add_argument("--savediff", default=True)
 args = parser.parse_args()
 subnum = args.subnum
 typ = args.typ
@@ -62,6 +63,10 @@ else:
 # Store paths in vars for faster string comprehension
 editp = path.join(basedir, 'sub-'+subnum)
 uneditp = path.join(basedir, 'sub-'+subnum+'_unedited')
+if savediff:
+    diffp = path.join(basedir, 'sub-'+subnum+'_diff')
+    if not os.path.exists(diffp):
+        os.makedirs(diffp)
 typ_dict = {'bm': 'brainmask', 'wm': 'wm', 'cp': 'control.dat', 'bfs': 'brain.finalsurfs'}
 fn_dict = {'bm': get_bm_edits, 'wm': get_wm_edits, 'cp': get_cp_edits, 'bfs': get_bfs_edits}
 
@@ -71,12 +76,12 @@ if typ == 'all':
     for k,v in fn_dict.items():
         print("Extracting %s edits"%(k))
         vol = typ_dict[k]
-        out = out.append(v(editp=editp, uneditp=uneditp, vol=vol, subnum=subnum))
+        out = out.append(v(editp=editp, uneditp=uneditp, vol=vol, subnum=subnum, savediff=savediff, diffp=diffp))
 else:
     print("Extracting %s edits"%(typ))
     # apply corresponding function as specified in the dicitonary of functions
     vol = typ_dict[typ]
-    out = fn_dict[vol](editp=editp, uneditp=uneditp, vol=vol, subnum=subnum) 
+    out = fn_dict[vol](editp=editp, uneditp=uneditp, vol=vol, subnum=subnum, savediff=savediff, diffp=diffp) 
 
 out.to_csv(path.join(outdir, subnum+'_'+typ+'_edits.csv'))
 
