@@ -4,11 +4,6 @@ from argparse import ArgumentParser
 import os
 from os import path
 import nibabel as nib
-import numpy as np
-import pandas as pd
-import shutil
-import sys
-from zipfile import ZipFile
 
 parser = ArgumentParser()
 parser.add_argument("--subnum")
@@ -18,10 +13,8 @@ parser.add_argument("--uneditp", default='/Users/zeynepenkavi/Downloads/ConteQC/
 
 args = parser.parse_args()
 subnum = args.subnum
-typ = args.typ
-basedir = args.basedir
-outdir = args.outdir
-savediff = args.savediff
+editp = args.editp
+uneditp = args.uneditp
 
 vols = [i for i in os.listdir(path.join(editp, subnum)) if i.endswith('.mgz')]
 
