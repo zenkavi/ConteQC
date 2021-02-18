@@ -4,10 +4,10 @@ from argparse import ArgumentParser
 import os
 from os import path
 import nibabel as nib
+import numpy as np
 
 parser = ArgumentParser()
 parser.add_argument("--subnum")
-parser.add_argument("--typ", default='all')
 parser.add_argument("--editp", default='/Users/zeynepenkavi/Downloads/ConteQC/pass0_edits')
 parser.add_argument("--uneditp", default='/Users/zeynepenkavi/Downloads/ConteQC/pass0')
 
@@ -28,4 +28,4 @@ for vol in vols:
 
 
     diff_img = nib.MGHImage(diff_data.astype(np.int32), edit_img.affine)
-    nib.save(diff_img, os.path.join(editp, 'diff_%s')%(vol))
+    nib.save(diff_img, os.path.join(editp, subnum, 'diff_%s')%(vol))
