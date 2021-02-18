@@ -8,7 +8,9 @@ import numpy as np
 
 parser = ArgumentParser()
 parser.add_argument("--subnum")
+#Conte-Freesurfer/FS7/pass0_edits
 parser.add_argument("--editp", default='/Users/zeynepenkavi/Downloads/ConteQC/pass0_edits')
+#Conte-Freesurfer/FS7/pass0_defaced
 parser.add_argument("--uneditp", default='/Users/zeynepenkavi/Downloads/ConteQC/pass0')
 
 args = parser.parse_args()
